@@ -1,0 +1,323 @@
+Content-Type: text/x-zim-wiki
+Wiki-Format: zim 0.6
+Creation-Date: 2022-11-02T09:17:08+01:00
+
+====== Arrays ======
+
+
+Un array es una estructura de datos similar a una lista (aunque una lista en programación es una estructura de datos diferente) que puede contener múltiples valores. Tradicionalmente esos valores en un array se han encontrado contiguos en memoria, lo que hace que su acceso y utilización sea rápida y directa.
+
+Imagina que tienes que manejar el sueldo semanal de un trabajador durante un año ¿cuántas variables necesitarías? ''$sueldoSemana1, $sueldoSemana2, $sueldoSemana3, etc.'' hasta completar las 52 semanas del año.
+En lugar de ello podemos crear un array que contenga todos esos datos:
+'''
+$sueldoSemana[0] = 405;
+$sueldoSemana[1] = 417;
+$sueldoSemana[2] = 427;
+$sueldoSemana[3] = 409;
+...
+'''
+
+El primer dato está en la posición 0, el segundo en la 1, etc. También se puede definir un array en una única línea así:
+''$sueldoSemana = array(405, 417, 427, 409);''
+
+O también así:
+''$sueldoSemana = [405, 417, 427, 409];''
+
+Como lenguaje //flexible// que es, PHP permite crear arrays con valores de diferentes tipos. Por ejemplo:
+'''
+$dato = ["Hola", 56, "Verde", "Pescado", true];
+echo "<p>El dato aleatorio es ", var_dump( $dato[ rand(0,4)] ) ,".</p>"
+'''
+
+**Nota**: el valor ''true'' se imprimirá como un ''1'', mientras que ''false'' se imprimirá como una cadena vacía. 
+
+
+===== Arrays bidimensionales =====
+
+Son arrays que contienen otros arrays.
+'''
+$persona = array (
+	array( "nombre" => "Rosa", "estatura" => 168, "sexo" => "F"),
+	array( "nombre" => "Ignacio", "estatura" => 175, "sexo" => "M"),
+	array( "nombre" => "Daniel", "estatura" => 172, "sexo" => "M"),
+	array( "nombre" => "Rubén", "estatura" => 182, "sexo" => "M")
+);
+'''
+
+
+También se puede definir más cómodamente así:
+'''
+$personas=[
+	["Juan", 59, 186],
+	["Carlos", 47, 185],
+	["Javier", 41, 179],
+];
+
+$indice = 1;
+echo "<p>La edad de ", $personas[$indice][0], " es ", $personas[$indice][1], " y la altura es ", $personas[$indice][2], ".</p>";
+'''
+
+
+
+===== Arrays asociativos =====
+
+'''
+$temperatura = array( "Sevilla" => 32, "Alcalá" => 30, "El viso" => 31, "Carmona" => 31);
+echo "La temperatura de Carmona es ", $temperatura['Carmona'] , " ºC";
+'''
+
+
+**Nota**: ''$_GET'' y ''$_POST'' son arrays asociativos
+
+
+===== Recorrer un array y número de elementos =====
+
+El número de elementos del array se consigue con la función ''count()''.
+
+Para recorrer un array podemos usar un bucle (por ejemplo un ''for'' o un ''foreach'').
+'''
+$personas=[
+	["Juan", 59, 186],
+	["Carlos", 47, 185],
+	["Javier", 41, 179],
+];
+
+$numPersonas = count($personas);
+
+for( $i = 0; $i<$numPersonas; $i++){
+	echo "<p>", $i, ": ", $personas[$i][0], "</p>";
+}
+
+//También podríamos usar (se indica primero el array)
+foreach ($personas as $p){
+	echo "<p>",$p[0], "</p>";
+}
+'''
+
+
+En el mismo bucle podemos recuperar la clave asociativa y el valor asociado:
+'''
+$temperatura = [ "Sevilla" => 32, "Alcalá" => 30, "El viso" => 31, "Carmona" => 31];
+
+foreach($temperatura as $clave => $valor){
+	echo "$clave - $valor<br>";
+}
+'''
+
+
+**Nota**: En un array no asociativo ''$clave'' contendrá el índice.
+
+
+===== Convertir una cadena de caracteres en un array =====
+Podemos usar la función explode que recibe un delimitador y una cadena de caracteres.
+
+'''
+$cadena ="En un lugar de La mancha";
+$palabras = explode( " ", $cadena);
+
+foreach ($palabras as $p) {
+	echo "<p>",$p,"</p>";
+}
+'''
+
+
+También existe la función ''implode'', que  une los elementos de un array en una cadena de caracteres (el separador es opcional).
+''$union = implode(" " , ["Hola", "Caracola"] );''
+
+
+===== Ejercicio =====
+
+**Ejercicio 1**: Escribe un programa que pida 5 números y que los mande al servidor. En el servidor se guardará en un array y se mostrarán los números introducidos junto con las palabras “máximo” y “mínimo” al lado del máximo y del mínimo respectivamente.
+**Nota**: intenta resolverlo usando las funciones ''min()'' y ''max()'' y sin usarlas.
+**Nota**: en PHP existen los valores ''INF'' y ''-INF'' que se pueden utilizar en las comparaciones. 
+
+**Ejercicio 2:** Escribe un programa que reciba 5 números y que los almacene en un array. Rota los elementos de ese array, es decir, el elemento de la posición 0 debe pasar a la posición 1, el de la 1 a la 2, etc. El número que se encuentra en la última posición debe pasar a la posición 0. Finalmente, muestra el contenido del array.
+Trata de resolver el ejercicio usando un segundo array de apoyo (más sencillo, pero más ineficiente) o sin usarlo (algo más complicado, pero más eficiente en el uso de la memoria).
+
+**Ejercicio 3:** Escribe un programa que reciba dos valores numéricos y genere 100 números aleatorios del 0 al 20 y que los muestre por pantalla separados por espacios. El programa a continuación cambiará todas las ocurrencias del primer valor por el segundo en la lista generada anteriormente.
+Los números que se han cambiado deben aparecer resaltados de un color diferente. 
+**Nota**: para generar un número aleatorio entre 0 y 4 se puede usar ''rand(0,4)''
+
+**Ejercicio 4:** Realiza un programa que pida la temperatura media que ha hecho en cada mes de un determinado año y que muestre a continuación un diagrama de barras horizontales con esos datos. Las barras del diagrama se pueden dibujar a base de la concatenación de una imagen o con el ancho de una división.
+
+**Ejercicio 5:** Escribe un programa que genere 20 números enteros aleatorios entre 0 y 100 y que los almacene en un array. El programa debe ser capaz de pasar todos los números pares a las primeras posiciones del array (del 0 en adelante) y todos los números impares a las celdas restantes. Utiliza arrays auxiliares si es necesario.
+
+**Avanzado:** Realiza un programa que sea capaz de rotar todos los elementos de una matriz cuadrada una posición en el sentido de las agujas del reloj. La matriz debe tener 10 filas por 10 columnas y debe contener números generados al azar entre 0 y 100. Se debe mostrar tanto la matriz original como la matriz resultado, ambas con los números convenientemente alineados.
+
+
+===== Añadir elementos a un array =====
+
+Podemos añadir un elemento al final de un array llamado ''$frutas'' simplemente con:
+''$frutas[] = 'pera';''
+
+Esto es equivalente a ''array_push($frutas, 'pera');''
+También existen ''array_unshift'' , ''array_push'' y ''array_pop''.
+
+===== Eliminar elementos de un array =====
+
+Varias maneras de hacerlo:
+	* Eliminar el último elemento usando ''array_pop''
+	* Eliminar el primer elemento usando ''array_shift''
+	* Usando ''unset''
+	* Usando ''array_splice'' (método recomendado para eliminar varios elementos)
+
+
+==== Usando unset ====
+
+Con un unset se puede eliminar un elemento del array, pero literalmente.
+'''
+$a = [1,2,3,4,5];
+unset($a[2]);
+'''
+
+
+El resultado será este:
+'''
+var_dump($a);
+
+array(4) {
+  [0]=> int(1)
+  [1]=> int(2)
+  [3]=> int(4)
+  [4]=> int(5)
+}
+'''
+
+Como se puede ver, efectivamente se ha eliminado el segundo elemento, **pero no se //reindexan//** los que siguen existiendo. De hecho el ''count($a)'' devuelve ''4'', por lo que un bucle ''for'' clásico fallará.
+'''
+for($i=0;$i<count($a);$i++){
+	echo "$i->$a[$i], ";
+}
+//Resultado: 0->1, 1->2, 2->, 3->4,
+'''
+
+
+Para solucionarlo se reindexa así:
+''$a = array_values($a);  //0->1, 1->2, 2->4, 3->5''
+
+**Resumiendo**:
+'''
+$a = [1,2,3,4,5];
+unset($a[2]);
+$a = array_values($a); 
+'''
+
+
+=== Con arrays asociativos ===
+
+**Importante**: cuidado con los arrays asociativos, el ''$a = array_values( $a );'' reconvierte todas las claves a valores numéricos y por tanto se perderán las del array original y por tanto, no se debe usar.
+
+Ejemplo: 
+'''
+$b=['nombre'=>'Javier', 'apellido1'=>'Mancera', 'apellido2'=>'Fernandez'];
+unset($b['apellido1']);
+'''
+
+El resultado será este:
+'''
+var_dump($b);
+
+array(2) {
+  ["nombre"]    => string(6) "Javier"
+  ["apellido2"] =>string(9) "Fernandez"
+}
+'''
+
+
+
+
+===== Usando array_splice =====
+
+El método ''array_splice'' se utiliza para eliminar varios elementos a la vez. Tiene la ventaja de que reindexa automáticamente los índices.
+
+El método recibe varios parámetros:
+	* El array
+	* El //desplazamiento// u //offset// del elemento desde el que se empezarán a eliminar. Si es un número negativo se empieza a contar desde el final.
+	* Opcional: La cantidad de elementos que se eliminarán. Si no se indica se eliminan desde el //offset// hasta el final.
+	* Opcional: Un array a insertar en lugar de los elementos eliminados.
+
+'''
+$a = [0,1,2,3,4,5,6,7,8];
+array_splice($a, 2, 3); //elimina desde el 3 elementos empezando por el que está en el offset 2
+
+var_dump($a);
+array(6) {
+  [0]=> int(0)
+  [1]=> int(1)
+  [2]=> int(5)
+  [3]=> int(6)
+  [4]=> int(7)
+  [5]=> int(8)
+'''
+
+
+Con arrays asociativos:
+'''
+$b=['nombre'=>'Javier', 'apellido1'=>'Mancera', 'apellido2'=>'Fernandez'];
+array_splice($b, 1, 1); //elimina 1 elemento empezando por el que está en el offset 1
+
+var_dump($b);
+array(2) {
+  ["nombre"]    => string(6) "Javier"
+  ["apellido2"] => string(9) "Fernandez"
+'''
+
+
+===== Ordenar un array =====
+
+Se pueden usar las funciones ''sort()'' para ordenar los valores del array ascendentemente y ''rsort()'' para ordenarlo descendentemente. Ambas funciones **modifican el array al ordenarlo**.
+
+'''
+$a=["hola", "javier", "caracola", "mancera"];
+sort($a);
+	//  Resultado:
+	//  [0]=> "caracola"
+	//  [1]=> "hola"
+	//  [2]=> "javier"
+	//  [3]=> "mancera"
+'''
+
+
+**Nota**: si en el array tenemos números y cadenas de caracteres con números (por ejemplo ''[1,"10",5]'') los elementos serán ordenados como su fueran números (''[1, 5, "10"]'').
+
+**Importante**: ''sort()'' y ''rsort()'' no sólo ordena el array, **también cambian las claves si usamos un array asociativo**. 
+
+
+Otras funciones:
+	* ''shuffle($a)'' desordena el array $a barajando sus elementos.
+	* ''ksort($a)'' ordena el array ascendentemente por la clave (para los arrays asociativos).
+	* ''krsort($a)'' ordena el array descendentemente por la clave (para los arrays asociativos).
+
+
+**Ejemplos**:
+
+'''
+$a = ["Nombre" => "Javier", "Apellido" => "Mancera"];
+sort($a);
+// Resultado: se pierden las claves por usar el sort
+//  [0]=>"Javier"
+//  [1]=>"Mancera"
+
+$a = ["Nombre" => "Javier", "Apellido" => "Mancera"];
+ksort($a);
+// Resultado: se ordena por las claves y se mantienen las claves al usar el ksort
+//  ["Apellido"]=>"Mancera"
+//  ["Nombre"]=>"Javier"
+'''
+
+
+
+====== Copia de un array ======
+
+Por defecto en PHP los arrays declarados directamente (no como objetos) se copian como ocurre con los valores escalares (números, por ejemplo). Si quieres usar una referencia debes indicarlo expresamente.
+
+Ejemplo:
+'''
+$a = array(1,2);
+$b = $a; // $b es un array diferente a $a
+$c = &$a; // $c es una referencia a $a
+'''
+
+
+
+

@@ -1,0 +1,170 @@
+Content-Type: text/x-zim-wiki
+Wiki-Format: zim 0.6
+Creation-Date: 2022-11-09T11:08:07+01:00
+
+====== Funciones ======
+
+
+Las funciones son trozos de código a los que asignamos un nombre. De esta manera sirven para encapsular código con un doble objetivo:
+	* Ayudar a reutilizar el código que contiene llamándolas varias veces
+	* Aumentar la legibilidad del código.
+
+Por ejemplo:
+'''
+function esMayorDeEdad( $edad ){
+	if( $edad >= 18 ){
+		return true;
+	}
+	else{
+		return false;
+	}
+}
+'''
+
+
+**Nota**: Las funciones no tienen que estar definidas antes de usarla (**si están en el mismo fichero**).
+
+
+===== Crear un fichero con funciones auxiliares =====
+
+Para organizar mejor el código a veces es buena idea crear un fichero que contenga algunas funciones auxiliares. Por ejemplo la función ''esMayorDeEdad()'' podríamos escribirla en un fichero llamado ''auxiliar.php'' que será enlazado desde el fichero PHP que vaya a usarla.
+
+Podemos enlazar un fichero usando ''include'' o ''include_once''. Por ejemplo:
+''include 'matematicas.php';''
+
+La diferencia entre ''include'' e ''include_once'' es que ''include_once'' comprobará si ya se cargó el fichero, evitando redeclaraciones.
+Debería ser la opción predilecta de las dos.
+
+**Importante**: el ''include'' debe aparecer antes de utilizar la función.
+
+Por otro lado es importante recordar que el fichero ''auxiliar.php'' debe comenzar y terminar con ''<?php'', pero no se recomienda que termine por ''?>'' (el motivo es evitar que por error, por ejemplo una línea en blanco al final, se mande parte de la información como cabecera HTML).
+
+==== Require ====
+
+Además también existen ''require'' y ''require_once'', que funcionan igual con la diferencia de que si el fichero a cargar no existe o no es legible (no tiene permisos, por ejemplo) ''include'' lanzará un //Warning//, mientras que ''require'' lanzará un //Error fatal// y detendrá la ejecución del script.
+
+
+===== Type hinting =====
+
+Aunque en PHP no podemos declarar que una variable sea de un tipo de datos concreto, podemos indicarlo en funciones, concretamente en los parámetros que recibe y en el tipo que devuelve una función.
+ 
+Función que devuelve un tipo específico:
+'''
+function suma($a, $b): float {
+	return $a + $b;
+}
+'''
+
+
+Si no devuelve ningún dato se puede indicar con ''void''.
+
+Función que recibe parámetros de tipos específicos:
+'''
+function suma(int $a, int $b) {
+	return $a + $b;
+}
+
+suma(5, 7);     // 12
+suma(5.5, 7.5); // 12 --> por la conversión a entero se truncan los valores de entrada
+'''
+
+En realidad, indicar el tipo sólo sirve para realizar conversiones de los datos que recibe o devuelve una función. Pero podemos obligar a que se muestre un error si los tipos no coinciden usando la directiva siguiente **al principio de cada fichero en la que la queramos aplicar**:
+''declare(strict_types=1);''
+
+De esta manera se mostrará un error si los tipos no coinciden en la llamada.
+
+**Importante**: ''declare(strict_types=1);'' debe ser **la primera línea** del fichero.
+
+**Nota**: los tipos estrictos se aplican sólo a valores escalares (es decir: ''int'', ''float'', ''string'' o ''bool'', pero no objetos o arrays).
+
+
+**Ejercicio**: ¿Qué ocurrirá si ejecutamos este código?
+'''
+<?php
+declare(strict_types=1);
+
+function suma(int $a, float $b): int{
+	return (int) ($a + $b);
+}
+
+$s = 4;
+$sum = suma($s, 7.8);
+echo "<p>El resultado es {$sum}</p>";
+?>
+'''
+
+
+
+===== Sobrecarga de funciones en PHP y valor por defecto =====
+
+Esto es más una curiosidad que otra cosa.
+En PHP no se pueden sobrecargar funciones, es decir, no podemos definir dos funciones con el mismo nombre aunque tengan distinto número de parámetros o de diferente tipo, pero se puede simular. 
+
+==== Pseudosobrecarga de funciones por número de parámetros ====
+
+'''
+echo nombre("Javier"), nombre("Javier", 'Mancera'), nombre("Javier", 'Mancera', "Fernández");
+
+
+function nombre($nombre, $apellido1=null, $apellido2=null) {
+	if (!isset($apellido1)) {
+		return "<p>Nombre (1): " . $nombre ."</p>";
+	} else if (!isset($apellido2)) {
+		return "<p>Nombre (2): " . $nombre . " " . $apellido1 ."</p>";
+	} else {
+		return "<p>Nombre (3): " . $nombre . " " . $apellido1 . " " . $apellido2 ."</p>";
+	}
+}
+'''
+
+
+==== Pseudosobrecarga de funciones por tipo de parámetros ====
+
+
+'''
+echo "<p>" , opera("<b>Suma:", "</b> ") , opera(5,6) , "</p>";
+			
+function opera($a, $b) {
+	if (is_int($a) && is_int($b)) {
+		return $a + $b;
+	} else {
+		return $a . $b;
+	}
+}
+'''
+
+
+
+
+===== Ejercicios =====
+
+**Ejercicio 1**: Crea una biblioteca de funciones auxiliares con las siguientes funciones.
+	* ''longitud'': devuelve la longitud de la cadena de caracteres que se pase como parámetro.
+	* ''camelizarPalabras'': recibe una cadena de caracteres con palabras separadas por espacios y devuelve una cadena de caracteres con todas las palabras unidas usando la notación //camel-case//. Por ejemplo: "hola caracola yeah" se convertirá en "holaCaracolaYeah". Nota: usa la función ''substr'' si lo consideras necesario. 
+	* ''descamelizarMetodo'': recibe una cadena de caracteres con el nombre de un método en notación //camel-case// y la devuelva con las palabras separadas por guiones bajos. Por ejemplo: "holaCaracolaYeah" se convertirá en "hola_caracola_yeah". 
+	* ''eliminarLetra'': recibe una cadena de caracteres y una letra, devolverá la cadena de caracteres sin la letra. Por ejemplo: si recibe "Hola caracola" y como letra la "a", devolverá "Hol crcol".
+
+**Nota**: recuerda que puedes acceder a las letras de una cadena de caracteres como si fuera un array. Ejemplo:
+'''
+$s="Pedro"; 
+echo "$s[2]"; // imprime d
+'''
+
+
+**Nota**: podría ser útil usar la función ''ucwords()''
+
+**Ejercicio 2**: Crea una biblioteca de funciones matemáticas que contenga las siguientes funciones. Recuerda que puedes usar las funciones ya definidas dentro de otras si es necesario.
+	* ''esCapicua'': Devuelve verdadero si el número de 5 cifras que se pasa como parámetro es capicúa y falso en caso contrario. Nota: puedes usar funciones como ''strval'' o ''strrev'' para crearla o bien usar operaciones matemáticas.
+	* ''esPrimo'': Devuelve verdadero si el número que se pasa como parámetro es primo y falso en caso contrario.
+	* ''siguientePrimo'': Devuelve el menor primo que es mayor al número que se pasa como parámetro. Por ejemplo, si se pasa 8, devolverá 11, si se pasa 242 devolverá 251, etc.
+	* ''digitos'': Cuenta el número de dígitos de un número entero.
+	* ''voltea'': Le da la vuelta a un número.
+	* ''juntaNumeros'': Pega dos números para formar uno.
+	* ''digitoN'': Devuelve el dígito que está en la posición n de un número entero. Se empieza contando por el 0 y de izquierda a derecha.
+	* ''posicionDeDigito'': Da la posición de la primera ocurrencia de un dígito dentro de un número entero. Si no se encuentra, devuelve -1.
+	* ''quitaPorDetras'': Le quita a un número n dígitos por detrás (por la derecha).
+	* ''quitaPorDelante'': Le quita a un número n dígitos por delante (por la izquierda).
+	* ''pegaPorDetras'': Añade un dígito a un número por detrás.
+	* ''pegaPorDelante'': Añade un dígito a un número por delante.
+
+

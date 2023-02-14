@@ -1,0 +1,309 @@
+Content-Type: text/x-zim-wiki
+Wiki-Format: zim 0.6
+Creation-Date: 2022-11-13T18:43:52+01:00
+
+
+====== Sesiones en PHP ======
+
+== ^{ocultar} ==
+Creado martes 23 noviembre 2022
+
+== ^{finocultar} ==
+
+Las sesiones permiten almacenar información sobre un usuario en el servidor, esta información se almacenará mientras la sesión no se cierre y por tanto no se perderá si el usuario va de una página a otra de nuestra aplicación. Por defecto esta información se almacena en un fichero (en un directorio temporal), aunque si tenemos suficiente memoria RAM podemos usar //memcached// u otras opciones para acelerar el acceso a la información utilizando la memoria del servidor.
+
+Estamos acostumbrados a que este comportamiento ocurra, por ejemplo al utilizar el correo electrónico tendremos que iniciar sesión y podremos seguir usándolo viendo correos electrónicos, eliminándolos o escribiéndolos sin necesidad de estar autenticándonos cada vez que queremos realizar una operación.
+Otro ejemplo típico es el de una tienda on-line, donde podemos ir añadiendo productos al carrito, yendo de página en página y viendo productos sin que se pierda el contenido del mismo y sin tener que volver a iniciar sesión con nuestro usuario en la tienda (para el carrito se puede usar del lado del cliente tecnologías de Javascript como LocalStorage o IndexedDB).
+
+El funcionamiento por defecto es este:
+	* Al iniciar sesión, el servidor asigna un ID al cliente. 
+	* Este ID se guarda en el cliente en forma de //cookie// (una //cookie// de sesión).
+	* El servidor genera un fichero con los datos a guardar.
+	* En cada petición del cliente, se manda también el ID a través de la cookie.
+	* Podemos ver la //cookie// en las opciones del desarrollador en la sección de //Almacenamiento//.
+
+Los parámetros de dónde se guarda la sesión en el servidor podemos verlo en el fichero ''php.ini'' o ejecutando un ''phpinfo();''
+
+
+===== Código básico: un contador de visitas =====
+
+Antes de poder guardar información en el array ''$_SESSION'' tenemos que iniciar la sesión con la función ''session_start()''.
+
+'''
+<?php
+		session_start();
+
+		if( !isset($_SESSION['visitas']) ){
+			$_SESSION['visitas'] = 1;
+		}else{
+			$_SESSION['visitas']++;
+		}
+?>
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Pruebas de PHP</title>
+	<link rel="stylesheet" href="estilos.css">
+	<script defer src="codigo.js"></script>
+</head>
+<body>
+	<h1>Pruebas</h1>
+		<?php 
+		echo '<p>Visitas: ', $_SESSION['visitas'] ,'</p>';
+		?>
+</body>
+</html>
+'''
+
+
+
+**Importante**: el ''session_start()'' hay que ponerlo al principio de todo, antes de la etiqueta ''<html>'' o el ''<!DOCTYPE>'', de lo contrario obtendremos este //warning//:
+''Warning: session_start(): Cannot start session when headers already sent in /var/www/html/servidor.php''
+
+Incluso cerrando la pestaña y volviéndola a abrir, el contador de visitas se mantendrá con el valor que tenía antes mientras la duración de la sesión no expire.
+
+**Importante**: No se pueden guardar en la sesión datos como en un array usando un ínidice. Estos dos ejemplos **son incorrectos**:
+'''
+$_SESSION[] = "Hola";
+$_SESSION[3] = "Caracola";
+'''
+
+
+
+
+===== Eliminar la sesión =====
+
+Para eliminar la sesión usaremos ''session_destroy();'' Veamos su uso con una web que incrementa, decrementa o elimina un valor en el array de ''$_SESSION[]''
+
+Ejemplo de fichero ''sesion.php''
+'''
+<?php
+	session_start();
+
+	if( !isset($_SESSION['valor']) ){
+		$_SESSION['valor'] = 0;
+	}
+
+	if( isset($_POST['txtAccion']) ){
+		if( $_POST['txtAccion'] == "inc" ){
+			$_SESSION['valor']++;
+		}
+		else if( $_POST['txtAccion'] == "dec" ){
+			$_SESSION['valor']--;
+		}
+		else if( $_POST['txtAccion'] == "borrar" ){
+			session_destroy();     // elimina la sesión
+			header("refresh: 0;"); // refresca la página
+		}
+		else{ //no debería ocurrir, pero si lo hace eliminamos la sesión
+			session_destroy();
+		}
+	}
+?>
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Pruebas de PHP</title>
+</head>
+<body>
+	<h1>Creación y destrucción de una sesión</h1>
+	<form method="POST" action="sesion.php">
+		<select name="txtAccion" id="txtAccion" size="3">
+			<option value="inc">Incrementar</option>
+			<option value="dec">Decrementar</option>
+			<option value="borrar">Borrar</option>
+		</select>
+		<input type="submit" value="Enviar">
+	</form>
+
+	<div id="divResultado">
+		<?php 
+			echo '<p>Valor: ', $_SESSION['valor'] ,'</p>';
+		?>
+	</div>
+
+</body>
+</html>
+'''
+
+
+
+**Nota**: probablemente en el ''select'' sería más apropiado quitar el atributo ''size="3"'' para que aparezca un //combobox// en vez de un //listbox//.
+
+**Importante**: se puede eliminar una variable de la sesión con ''unset($_SESSION['nombreVariable'])'', pero cuidado con hacer directamente un ''unset($_SESSION)'', pues destruiremos la sesión completamente.
+
+**Nota**: por defecto la //cookie// de sesión en el cliente se elimina al cerrar el navegador, pero no al cerrar una pestaña. Este es el comportamiento habitual de los navegadores.
+
+
+==== Duración de la sesión ====
+
+Por defecto la duración de una sesión en PHP es de 1440 segundos (24 minutos) y pasado ese tiempo esos datos pasan a ser considerados basura y existe la posibilidad de que el recolector de basura de PHP (el garbage collector) los borre.
+
+La duración de una sesión se puede establecer en el momento de su creación.
+
+Por ejemplo:
+'''
+session_set_cookie_params( 7200 ); //2 horas
+session_start();
+'''
+
+Pasadas ese tiempo (el establecido por defecto o el que hayamos indicado nosotros), la cookie se eliminará. Podemos extender la vida útil de la cookie con un código como el que sigue:
+
+'''
+<?php
+  $tiempo = 600; //10 minutos
+  session_start();
+  setcookie( session_name(), session_id(), time() + $tiempo);
+?>
+'''
+
+
+
+
+===== Cookies =====
+
+Una //cookie// es un fichero con algo de información que se guarda en el ordenador del cliente con información que resistirá más tiempo que la sesión. Aunque probablemente sea más sencillo utilizar el ''localStorage'' desde Javascript, desde PHP podemos almacenar información usando //cookies// aunque la cantidad de información que puede almacenar una //cookie// es bastante más limitada.
+
+El tamaño máximo que se puede guardar en una //cookie// está limitado a 4KB y no se pueden almacenar más de 50 //cookies// por servidor.
+
+''setcookie(nombre, valor, momento de expiración);''
+
+Por ejemplo:
+''setcookie("colorPreferido", "#F03276", time() + 7*24*60*60); //una semana 7 días * 24 horas * 60 min * 60 seg''
+''setcookie("colorPreferido", "#F03276", strtotime( '+30 days' )); //un mes de duración''
+
+**Nota**: Si en el momento de la creación se establece como tiempo de vida ''0'' o no se indica (se omite) la //cookie// caducará automáticamente al cerrar el navegador. Pero aunque el navegador elimine la //cookie//, en el servidor seguirá existiendo mientras al //garbage collector// no la borre.
+
+Recuperaremos el valor almacenado usando el array asociativo ''$_COOKIE[]'':
+''$colorPreferido = $_COOKIE["colorPreferido"];''
+
+Podemos imprimir todas las cookies con ''print_r( $_COOKIE);''
+
+Para eliminar una cookie se puede establecer su valor a null y su validez a -1 (y además borramos la variable que contenía el valor):
+'''
+setcookie("colorPreferido", "", -1);
+unset($colorPreferido);
+'''
+
+**Nota**: no se deben utilizar puntos en el nombre de la //cookie//. Por ejemplo ''setcookie("hola.caracola", 5, time() + 256);'' es un nombre potencialmente problemático.
+
+**Importante**: si necesitamos almacenar un booleano en una //cookie//, debemos usar como valor ''0'' (en lugar de ''false'') o ''1'' (en vez de usar ''true''). Esto es porque un valor de ''false'' es interpretado como que la //cookie// puede ser eliminada.
+
+**Importante**: las cookies se actualizan al recargar la página, por lo que aunque cambiemos su valor con una orden ''setcookie()'', mantendrá el valor que tenía la última vez que se cargó la página.
+
+
+==== RGPD ====
+
+https://es.wikipedia.org/wiki/Reglamento_General_de_Protecci%C3%B3n_de_Datos
+
+El RGPD de la Unión Europea no distingue entre //cookie//, //localStorage// o //IndexedDB//. Toda tecnología que permita almacenar datos sobre un usuario o equipo cliente se ve afectada por ella.
+
+El RGPD de la Unión Europea establece que no hay necesidad de pedir consentimiento para las //cookies// técnicas, es decir, aquellas que son estrictamente necesarias para el correcto funcionamiento de una aplicación web.
+
+Sin embargo sí hay que pedir consentimiento **explícito** al usuario **antes** de almacenar una //cookie// no técnica (de seguimiento, publicidad u otros fines).
+	* Se establece como requisito que el usuario debe conocer qué datos se van a almacenar y de qué manera se van a utilizar sin ambigüedades.
+	* El usuario debe poder rechazar la //cookie// si así lo desea.
+	* El consentimiento o rechazo deben ser igualmente sencillos. Si es sencillo aceptar todo, debe ser sencillo rechazar todo. La opción de rechazar debe estar tan visible como la opción de aceptar.
+	* No se pueden incluir en los formularios de consentimiento casillas premarcadas, esto está expresamente prohibido.
+	* Imponer aceptar //cookies// que no sean técnicas para acceder a un sitio web ha sido declaradas ilegales en la Unión Europea. El que el consentimiento sea libre y no coaccionado es un requisito de la legislación europea.
+
+
+
+====== Ejercicios ======
+
+**Ejercicio 1**: Crea una web cuyo color de fondo (propiedad ''background-color'') sea azulado. La web contendrá un formulario que permita elegir un color y enviar la selección al servidor. Desde el servidor, se guardará en una //cookie// el color de fondo elegido y se cargará la misma página inicial pero con el color elegido. Si se vuelve a acceder a la página, el color de fondo mantendrá el color elegido y no el que tenía por defecto.
+
+**Nota**: el cambio color podría tener efecto en el siguiente refresco de la página por la manera en la que funcionan las //cookies//.
+
+**Ejercicio 2**: Crea una web con un formulario que contenga un cuadro de texto en el que el usuario introducirá un número y un par de botones de //submit//. El primer botón hará que se realice una llamada en el servidor y se añadirá a un array dentro de la sesión el número que haya introducido el usuario. El segundo botón hará que se calcule el mayor número introducido, el menor y la media, los mostrará y eliminará la sesión. 
+Si se pulsa el segundo botón sin haber introducido ningún número, se indicará sin calcular nada.
+
+**Ejercicio 3**: Crea una web que en el ''index.php'' se compruebe si el usuario es un humano o un robot. Esta información debe estar guardada en la sesión (por ejemplo en ''$_SESSION['humano']'').
+Si el usuario no es un humano o no se sabe aún, generará a modo de //captcha// una operación aritmética que el usuario debe responder. Por ejemplo, se le pide al usuario que indique qué número hay que sumar a 7 para que el resultado sea 15 o qué número multiplicado por 3 da como resultado 21. Estas preguntas deben ser generadas aleatoriamente.
+Cuando la respuesta del usuario llegue al servidor, se comprobará si son correctas o no. Si la respuesta dada no es correcta, se volverá a mostrar el formulario de antes con una nueva operación.
+Si la respuesta es correcta, se redirigirá al fichero ''acceso.php''.
+Si el usuario intenta acceder al fichero ''acceso.php'' por su cuenta sin haber respondido correctamente, se le redirigirá al ''index.php'' de nuevo.
+**Nota**: Se puede redirigir a una página diferente usando ''header('Location: ''[[http://www.example.com/'|''http://www.example.com/''']]'');'' pero sólo si no se ha mandado aún ninguna otra etiqueta HTML.
+
+**Ejercicio 4**: 
+Crea una tienda on-line sencilla con un catálogo de productos y un carrito de la compra. Un catálogo de cuatro o cinco productos será suficiente. De cada producto se debe conocer al menos la descripción y el precio. Todos los productos deben tener una imagen que los identifique. Al lado de cada producto del catálogo deberá aparecer un botón //Comprar// que permita añadirlo al carrito.
+Si el usuario hace clic en el botón //Comprar// de un producto que ya estaba en el carrito, se deberá incrementar el número de unidades de dicho producto. Para cada producto que aparece en el carrito, habrá un botón //Eliminar// por si el usuario se arrepiente y quiere quitar un producto concreto del carrito de la compra. Pulsando sobre el carrito se mostrará un resumen de los productos elegidos.
+
+
+== ^{ocultar} ==
+
+==== Posible solución ejercicio 2 ====
+'''
+<?php
+	session_start();
+	if( !isset($_SESSION['valores']) )
+		$_SESSION['valores'] = [];
+?>
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Pruebas de PHP</title>
+	<link rel="stylesheet" href="estilos.css">
+	<script defer src="codigo.js"></script>
+</head>
+<body>
+	<h1>Pruebas</h1>
+
+	<form method="POST" action="servidor.php">
+		<input type="number" name="txtNumber"   id="txtNumber"><br>
+		<input type="submit" name="btnAnadir"   id="btnAnadir"   value="Añadir">
+		<input type="submit" name="btnCalcular" id="btnCalcular" value="Calcular">
+	</form>
+
+	<div id="divResultado">
+		<?php
+			//si se pulsa el botón de añadir y hay un dato
+			if( isset($_POST['txtNumber'] ) && isset($_POST['btnAnadir']) ){
+				$n = $_POST['txtNumber'];
+				array_push( $_SESSION['valores'], $n ); //añadimos un valor al array
+			}
+
+			if( isset($_POST['btnCalcular']) ){//si el botón pulsado es el de calcular
+				$arr = $_SESSION['valores'];
+
+				if( count( $arr ) != 0){ //calculamos la media, el mayor y el menor
+					$suma = 0;
+					$min=INF;  //  infinito
+					$max=-INF; // -infinito
+					foreach ($arr as $num) {
+						$suma += $num;
+						if($num<$min) $min=$num;
+						if($num>$max) $max=$num;
+					}
+					$media = $suma / count( $arr );
+					echo "<p>Media: ", $media ,"</p>";
+					echo "<p>Max: ", $max ,"</p>";
+					echo "<p>Min: ", $min ,"</p>";
+				}
+				else
+					echo "<p>No se ha introducido ningún número</p>";
+				
+				session_destroy();
+			}
+
+		?>
+	</div>
+
+</body>
+</html>
+'''
+
+
+== ^{finocultar} ==

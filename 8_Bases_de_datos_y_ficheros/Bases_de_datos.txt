@@ -1,0 +1,251 @@
+Content-Type: text/x-zim-wiki
+Wiki-Format: zim 0.6
+Creation-Date: 2023-01-10T20:38:58+01:00
+
+
+====== 8-2 Bases de datos ======
+
+Vamos a usar SQLite para trabajar con una base de datos. Veamos algunas características:
+	* SQLite es la base de datos más usada del mundo con más de un billón de bases de datos en activo (un uno seguido de doce ceros)
+	* Probablemente sea la pieza de software más desplegada del mundo, sólo por detrás de la biblioteca libzip y quizás la libpng
+	* Es gratuita y de dominio público, cualquiera puede usarla y modificarla.
+	* Se usa en navegadores web (Firefox, Chrome, Safari, Opera, etc.)
+	* Se usa en todos multitud de sistemas operativos, incluyendo todos los Android, iOS, MacOS, Windows 10, Blackberry, WebOS, Tizen...
+	* Se usa en aplicaciones populares como Skype, iTunes, Dropbox, Adobe Photoshop Elements, Adobe Lightroom, Adobe PDF Reader, Kodi, rpm (el gestor de paquetes de Fedora), Laravel, Drupal, Django, Ruby on Rails, Tomtom (GPS), Evernote, Proxmox ...
+	* Permite gestionar bases de datos de hasta 2TB
+	* PHP incluye soporte para SQLite por defecto desde la versión 5
+	* Las bases de datos son autocontenidas en un único fichero
+	* No requiere configuración
+	* No permite crear usuarios a los que se le garantiza permisos, se apoya en los permisos que se establezcan en el sistema de ficheros
+	* No es muy adecuada en sistemas en los que se prevean muchas escrituras (las escrituras concurrentes están muy limitadas), pero no hay problemas con múltiples lecturas concurrentes
+	* Usa tipos dinámicos (realizará conversiones de tipos automáticas si son necesarias)
+	* No permite crear vistas y sólo soporta //triggers// parcialmente
+
+
+===== PDO =====
+
+Vamos a utilizar los objetos PDO (PHP Data Object) para conectarnos a las bases de datos y gestionarlas. PDO ofrece una abstracción a la hora de conectarse y utilizar diferentes bases de datos, así se usarán las mismas funciones aunque la base de datos sea diferente y por tanto disminuyendo el acoplamiento entre el código y la base de datos.
+
+
+===== Conexión a la base de datos =====
+
+Usaremos el siguiente código cuando vayamos a conectarnos a una base de datos MySQL:
+''$conexion = new PDO( "mysql:host=$ip;dbname=$db",  $usuario,  $contraseña );''
+
+También podemos indicar la codificación de caracteres:
+''$conexion = new PDO( 'mysql:host=localhost;dbname=tareas;charset=utf8',  "root",  "root" );''
+
+El código para una base de datos SQLite es aún más simple al no tener que indicar ni dirección ip, ni usuarios ni contraseñas.
+''$conexion = new PDO( "sqlite:basedatos.db" );''
+
+Lo que haremos será crear una función en el fichero ''config.php'' que nos permita realizar la conexión al fichero que contiene la base de datos.
+'''
+function conectarBaseDatos( ){
+	$doc_root = $_SERVER["DOCUMENT_ROOT"];
+	$rutabd = $doc_root . "/basedatos/bd.sqlite";
+
+	try {
+		$conexion = new PDO("sqlite:".$rutabd);
+	} catch (PDOException $e) {
+		responderError( "No se ha podido establecer conexión con el servidor de bases de datos. \n " . $e->getMessage() );
+		die ("Error: " . $e->getMessage());
+	}
+
+	return $conexion;
+}
+'''
+
+
+Ahora podremos usar la conexión para realizar las consultas que deseemos. Por ejemplo, para crear una tabla.
+
+
+===== Crear una tabla ejecutando una consulta =====
+
+Para ejecutar consultas podemos usar una plantilla que tendremos que modificar para adaptarla a nuestras necesidades. Como ejemplo, vamos a crear una tabla en el fichero de base de datos que creamos en el anterior ejercicio. Si no lo tienes creado, hazlo ahora (asegúrate de que el directorio ''basedatos'' y el fichero  ''bd.sqlite'' pertenecen al usuario ''www-data'' y al grupo ''www-data'').
+
+'''
+.
+├── index.php
+├── php
+│    └── servidor.php
+├── public/
+│	    ├── css/
+│	    └── js/
+└── basedatos/
+	    └── bd.sqlite
+'''
+
+Ahora podemos crear una tabla ejecutando este código en el servidor (el fichero podría llamarse ''crearTabla.php''):
+'''
+<?php
+require( 'config.php');
+
+// Creamos la conexión al servidor
+$conexion = conectarBaseDatos();
+
+// Recuperamos los parámetros de la petición
+// $nombreTarea = $_POST["nombreTarea"];
+
+$sql = "CREATE TABLE tareas (
+	id INTEGER PRIMARY KEY AUTOINCREMENT, 
+	nombre TEXT, 
+	prioridad INTEGER DEFAULT 0
+	);" ;
+
+try{
+	$resultado = $conexion->exec( $sql ); //Consultas de inserción, eliminación y actualización con exec. Selección con query
+}catch(Exception $e){
+	$resultado = null;
+	$conexion = null;
+	responderError( "Error al crear la tabla TAREAS. " . $e->getMessage());
+	exit(0);
+}
+
+//cerramos la conexión
+$resultado = null;
+$conexion = null;
+
+//mandamos la respuesta
+responder("Tabla TAREAS creada con éxito.");
+'''
+
+
+==== Ejercicios ====
+
+**Ejercicio 2**: Añade un segundo botón que tenga como etiqueta //Crear tabla// y ejecute una llamada AJAX que llame al fichero ''crearTabla.php ''de arriba.
+
+
+
+===== Ejecutar una consulta de eliminación, inserción o actualización =====
+
+Las operaciones de inserción, borrado o actualización de datos sobre una tabla se realiza mediante ''exec()''.
+
+'''
+$sql = "insert into tareas(nombre,completada) values ('Subir el Everest', 0)" ;
+$resultado = $conexion->exec( $sql );
+'''
+
+Esa consulta es perfectamente válida porque los datos que vamos a insertar los estamos indicando nosotros manualmente. Sin embargo, si los datos que vamos a insertar provienen de datos escritos por un usuario, **hay que intentar prevenir los ataques de SQL injection**. Para ello, podemos usar consultas con parámetros.
+
+
+==== Consultas con parámetros ====
+
+Este tipo de consultas tiene la ventaja de que se pueden repetir en el tiempo, haciendo que la base de datos y el //driver// de conexión de PHP puedan cachear la consulta y hacer la ejecución más eficiente. Estas consultas preparadas se ejecutarán con ''execute()''.
+
+Código de ejemplo:
+'''
+$id = $_GET['id'];
+$resultado = $conexion->prepare("SELECT * FROM tareas WHERE id>=:id");
+$resultado->execute([':id' => $id]);
+'''
+
+
+===== Ejecutar una consulta de selección =====
+
+Las consultas de selección se hacen con el método ''query()'', aunque al igual que con las anteriores habría que usar parámetros en las consultas para evitar ataques de inyección de SQL. 
+
+Ejemplo de código con ''query()'':
+'''
+$resultado = $conexion->query("SELECT * FROM tareas");
+
+while ( $tarea = $resultado->fetchObject() ) {
+	echo "<p>", $tarea->id ,": ", $tarea->nombre, " (", $tarea->prioridad ,")</p>";
+}
+'''
+
+En lugar de ''$resultado->fetchObject()'' podemos usar ''$resultado->fetch()'' que devolverá una tarea (una fila de la consulta) como un array asociativo.
+
+**Nota**: También se puede, directamente, ''fetchAll()'' para recuperar todas las filas resultado de realizar la consulta.
+
+Otra manera de hacerlo, en esta ocasión usando ''fetchAll()'':
+'''
+$resultados = $resultado->fetchAll(); //devuelve un array
+
+echo "<p>Hay un total de ",count($resultados)," tareas en la base de datos.</p>";
+
+foreach ($resultados as $tarea) {
+	echo "<p>", $tarea['id'] ,": ", $tarea['nombre'], " (", $tarea['prioridad'] ,")</p>";
+}
+'''
+
+Salvo que indiquemos lo contrario, PHP por defecto se trae de la base de datos todas las filas de una vez, pero podemos procesarlas de una en una (''fetchObject'') o en un array asociativo (''fetchAll'').
+
+Con el ''fetchAll()'' podemos contar las filas con un ''count( ... )''. Sin embargo con el fetch tendremos que usar en un contador en el bucle.
+
+
+Lo más cómodo para nosotros, si queremos mandar de vuelta todas las filas, será mandarlas todas de vuelta.
+''responder($resultado->fetchAll()); //los manda todos de vuelta''
+
+
+==== Limitando las consultas de selección ====
+
+Podemos limitar el número de registros obtenidos de las consultas selección usando las ''LIMIT'' y el ''OFFSET'' en la propia consulta.
+
+Para limitar los resultados de la consulta, vamos a hacer uso de las palabras reservadas ''LIMIT'' y ''OFFSET'' de SQL y así podremos paginar los resultados. Podemos usarlos de la siguiente manera:
+
+'''
+SELECT * FROM tareas
+LIMIT 10 OFFSET 30;
+'''
+
+	* ''LIMIT'' indica cuántos resultados como máximo se devolverán en la consulta, en el caso de arriba se devolverán 10.
+	* ''OFFSET'' (que significa desplazamiento) indica cuántos elementos se ignorarán antes de empezar a devolverlos, en este caso 30.
+
+De este modo nos devolverá los resultados que ocupen una posición entre la 31 y la 40 (10 resultados).
+
+
+====== Ejercicios ======
+
+**Ejercicio 3**: Termina la aplicación y haz que se puedan crear tareas, listarlas y eliminarlas. 
+Acuérdate de usar parámetros para las consultas que vayas a ejecutar.
+
+**Ejercicio 4 (ampliación)**: Completa la aplicación haciendo que se muestren las tareas paginadas de 5 en 5. Incluye botones al final del listado para avanzar o retroceder la página de resultados que se está mostrando.
+
+
+
+
+
+====== Ejercicio para entregar ======
+
+Elegir uno de los propuestos.
+
+**Ejercicio A**: Crea una aplicación web que permita mostrar anuncios de una serie de puestos de trabajo de una empresa. Los anuncios estarán almacenados en una base de datos y sólo un usuario autorizado (el usuario ''admin'' con clave ''Kilobyte1'') podrá añadirlos y eliminarlos, el resto de los usuarios de la aplicación (incluyendo los no //logueados//) sólo podrán verlos.  Opcionalmente se puede añadir la funcionalidad de modificarlos.
+Los anuncios constarán de un título, una descripción y una lista de requisitos (por ejemplo tecnologías).
+
+La funcionalidad, debe ser la siguiente:
+	* En la página principal se mostrarán los anuncios que haya almacenados en la base de datos. Si no hay ninguno se mostrará un mensaje que indique que no hay puestos de trabajo disponibles.
+	* En la página principal debe haber un formulario que permita hacer //login// en la aplicación (por ejemplo en un lateral o en una barra de navegación) o un enlace a una página que permita hacer //login// (en este caso, tras hacer el //login// correctamente se redirigirá a la página principal).
+	* Si el usuario ha hecho //login// correctamente (nombre de usuario y contraseña correctos) se mostrarán los anuncios junto con un botón o mecanismo similar para eliminarlos. También aparecerá un formulario (por ejemplo al final o al principio de los anuncios) que permitirá añadir un nuevo anuncio.
+	* Si el //login// se realizó correctamente, se recargará la página principal para que aparezca la funcionalidad de añadir y eliminar anuncios.
+	* El //login// correcto o no se almacenará en el array de sesión del usuario.
+	* La estética o organización de los elementos queda a elección del programador.
+
+
+
+**Ejercicio B**: Crea una web que permita mostrar //post// de //microblogging// al estilo de twitter. Cada //post// se almacenará en una base de datos y contendrá un título, un mensaje, y opcionalmente un hiperenlace y una imagen (la URL de la imagen). Debe haber un usuario autorizado (el usuario ''admin'' con clave ''Kilobyte1'') que podrá añadir los //post// y eliminarlos, el resto de los usuarios (incluyendo los usuarios no //logueados//) sólo podrán verlos. Opcionalmente se puede añadir la funcionalidad de modificarlos.
+
+La funcionalidad, debe ser la siguiente:
+	* En la página principal se mostrarán los últimos diez //posts// que haya almacenados en la base de datos. Si no hay ninguno se mostrará un mensaje que indique que no hay nada que mostrar.
+	* En la página principal debe haber un formulario que permita hacer //login// en la aplicación (por ejemplo en un lateral o en una barra de navegación) o un enlace a una página que permita hacer //login// (en este caso, tras hacer el //login// correctamente se redirigirá a la página principal).
+	* Si el usuario ha hecho //login// correctamente (nombre de usuario y contraseña correctos) se mostrarán los //posts// junto con un botón o mecanismo similar para eliminarlos. También aparecerá un formulario (por ejemplo al final o al principio de los //posts//) que permitirá añadir un nuevo //post//.
+	* Si el //login// se realizó correctamente, se recargará la página principal para que aparezca la funcionalidad de añadir y eliminar //posts//.
+	* El //login// correcto o no se almacenará en el array de sesión del usuario.
+	* La estética o organización de los elementos queda a elección del programador.
+
+
+**Ejercicio C**: Crea una aplicación web que permita gestionar un inventario de los ordenadores de un instituto.
+Debe permitir añadir y eliminar los siguientes datos de cada ordenador:
+	* Nº de equipo
+	* Aula
+	* Procesador
+	* RAM
+	* MAC
+
+La funcionalidad, debe ser la siguiente:
+	* Si el usuario no ha hecho //login// se mostrará una pantalla donde tendrá que //loguearse//. Si el //login //es incorrecto, se recargará la pantalla de //login// y se indicará que el usuario o la contraseña eran incorrectas. Si el //login// es correcto se redirigirá a una página de gestión.
+	* El //login// correcto o no se almacenará en el array de sesión del usuario.
+	* Si el usuario intenta acceder a la página de gestión y no se había hecho previamente el //login// de manera correcta, se redirigirá ala pantalla de //login//.  
+	* En la página de gestión se mostrarán ordenadores que haya almacenados en la base de datos. Si no hay ninguno se mostrará un mensaje que indique que no hay ningún ordenador que mostrar.
+	* En la página de gestión debe haber junto a los ordenadores con un botón o mecanismo similar para eliminarlos. También aparecerá un formulario (por ejemplo al final o al principio de los ordenadores) que permitirá añadir un nuevo ordenador. Opcionalmente se puede añadir la funcionalidad de modificar los ordenadores.
+	* La estética o organización de los elementos queda a elección del programador.
+

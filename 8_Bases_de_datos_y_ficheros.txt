@@ -1,0 +1,174 @@
+Content-Type: text/x-zim-wiki
+Wiki-Format: zim 0.6
+Creation-Date: 2022-11-24T22:36:28+01:00
+
+====== 8 Bases de datos y ficheros ======
+
+
+Prácticamente cualquier aplicación que vayamos a utilizar necesitará almacenar algún tipo de información de manera permanente. Esto se puede lograr mediante el uso de ficheros o bien, más convenientemente, usando una base de datos.
+
+
+====== 8a - Ficheros ======
+
+Para usar ficheros en PHP lo primero será abrir el fichero en el modo que necesitemos, luego manipularemos la información (escribir o leer) y finalmente cerraremos el fichero.
+
+Por ejemplo, supongamos que tenemos un fichero llamado ''datos.txt'' que contiene varias líneas de datos que queremos leer.
+'''
+$fichero = fopen('datos.txt', 'r') or die('Error al acceder al fichero.');
+$contenido = fread($fichero, filesize('datos.txt') );
+echo '<pre>' . $contenido . '</pre>';
+fclose($fichero);
+'''
+
+
+La función ''die()'' hará que se termine el //script// inmediatamente mostrando el mensaje de error que se indica si no se puede acceder al fichero (porque no existe, porque no se tiene permisos, etc.), lo cual no es muy elegante.
+
+Otra opción podría ser impedir que se muestre el //warning// que se mostrará si no se puede acceder al fichero (lo hacemos con la ''@'') y a cambio hacer nosotros mismos la comprobación.
+**Nota**: Si queremos, podemos recuperar el mensaje con un ''error_get_last()['message']''
+
+'''
+$fichero = @fopen('datos.txt', 'rb'); 
+if ( $fichero ){
+	$contenido = fread($fichero, filesize('datos.txt') );
+	echo '<pre>' . $contenido . '</pre>';
+	fclose($fichero);
+}else{
+	echo '<p>Error al acceder al fichero datos.txt</p>';
+	echo '<p>Mensaje de error: ' . error_get_last()['message'] . '</p>';
+}
+'''
+
+
+La función ''fopen()'' recibe dos parámetros: la ruta del fichero a utilizar y el modo en que se va a abrir. Devuelve un descriptor de fichero.
+	* En Windows si la ruta debe contiene una contrabarra, ésta tendrá que ser doble porque es el caracter de escape, por ejemplo: ''c:\\hola\\caracola.txt''
+	* La ruta puede ser relativa o absoluta
+	* El modo puede ser:
+		* ''r'' : sólo lectura. Coloca el cursor al inicio
+		* ''r+'' : lectura y escritura. Coloca el cursor al inicio
+		* ''w'' : sólo escritura. Si el fichero existe lo sobreescribe, si no existe se intenta crear. Coloca el cursor al inicio
+		* ''w+'' : lectura y escritura. Si el fichero existe lo sobreescribe, si no existe se intenta crear. Coloca el cursor al inicio
+		* ''a'' : sólo escritura. Añadirá información al final del fichero. La ''a'' es de //append//. Coloca el cursor al final
+		* ''a+'' : lectura y escritura. Añadirá información al final del fichero. Coloca el cursor al final
+
+**Importante**: Cada sistema operativo utiliza símbolos diferentes para representar una nueva línea y retorno de carro. Siempre que sea posible, se recomienda **guardar ficheros y leerlos usando formato binario** y no en modo texto. Se recomienda utilizar ''b'' (//binary//) unido al modo para que se use en formato binario, de manera que se eviten los problemas de los retorno de carro en los diferentes sistemas operativos (''\n'' en Linux, ''\r'' en Mac y ''\r\n'' en Windows). Este modo es más portable. Por ejemplo: ''rb+''
+Evidentemente, si tenemos que leer un fichero no creado por nosotros, no tendremos más remedio que utilizar los símbolos de cada sistema operativo.
+
+**Muy importante**: Para que Apache pueda crear ficheros y directorios sin tener problemas de permisos, debemos cambiar el propietario y el grupo propietario de los ficheros y directorios en los que queremos que pueda escribir. Como mínimo, debemos cambiar el grupo propietario del directorio actual para que sea ''www-data'' (el grupo de apache). Para ello, en el directorio donde queramos que apache pueda escribir ejecutaremos ''chown :www-data .''
+De hecho los ficheros que se crearán pertenecerán al usuario ''www-data'' y al grupo ''www-data''.
+
+===== Leer y escribir =====
+
+Se puede leer de un fichero con las órdenes:
+	* ''fgets( $fichero )'' : lee una línea de un fichero. Combinándolo con un bucle podemos leer línea a línea
+	* ''fread( $fichero, $tamaño )'' : lee ''$tamaño'' bytes del fichero. La función ''filesize($fichero)'' devuelve el tamaño de un fichero
+	* ''feof( $fichero )'' : indica si se ha llegado al final del fichero
+	* ''fgetc( $fichero )'' : lee un caracter
+	* ''fwrite($fichero, "Hola caracola\n" )'' : escribe en el fichero la cadena que se pase como parámetro
+
+**Ejemplo**: leer un fichero línea a línea.
+'''
+$fichero = @fopen('datos.txt', 'rb');
+if ( $fichero ){
+	while(!feof($fichero)) {
+		$contenido = fgets($fichero );
+		echo '<pre>' . $contenido . '</pre>';
+	}
+	fclose($fichero);
+}else{
+	echo '<p>Error al acceder al fichero datos.txt</p>';
+}
+'''
+
+
+===== Otras órdenes =====
+
+	* ''touch( $fichero )'' : crea un fichero vacío con el nombre indicado
+	* ''file_exists( $ficheroodirectorio )'' : comprueba si existe el fichero o directorio indicado
+	* ''mkdir( $directorio )'' : crea el directorio indicado. Se puede indicar un segundo parámetro entero con los permisos, por defecto es ''0777''
+	* ''rmdir( $directorio )'' : elimina el directorio indicado
+	* ''file_put_contents( $fichero, $datos )'' : escribe datos en el fichero (equivale a un ''fopen()'', ''fwrite()'' y ''fclose()''). Como tercer parámetro se puede indicar la constante ''FILE_APPEND'' para que se añadan datos en vez de sobreescribir el fichero. Devuelve el nº de bytes escritos o ''false'' si no se pudo escribir (**Importante**: comprobarlo con ''==='', 0 bytes escritos también equivale a ''false'').
+	* ''file_get_contents( $fichero )'' : lee el contenido del fichero (equivale a un ''fopen()'', ''fread()'' y ''fclose()''). Si devuelve ''false'' es que se produjo un error (**Importante**: comprobarlo con ''==='', 0 bytes escritos también equivale a ''false'').
+
+
+===== Ejercicios =====
+
+**Ejercicio 1**: Crea el siguiente árbol de directorios a mano:
+'''
+.
+├── php
+└── public/
+ 	    ├── css/
+ 	    └── js/
+'''
+
+Dentro del directorio llamado ''php'' crea un fichero llamado ''directorios.php''. Los ficheros CSS  de tu proyecto irán dentro del directorio ''css'', los ficheros Javascript dentro del directorio ''js'' y los ficheros del lado del servidor en el directorio ''php''.
+
+Crea un fichero ''index.php'' en la raíz del proyecto que presentará una página con un formulario y un botón, al pulsar el botón se generará una llamada (si quieres puedes hacer que sea una llamada AJAX) que gestionará el fichero ''servidor.php'' que creará un directorio llamado ''basedatos'' y dentro un fichero vacío llamado ''bd.sqlite''.
+
+El proyecto quedará una vez pulsado el botón así: 
+'''
+.
+├── index.php
+├── php
+│    └── servidor.php
+├── public/
+│	    ├── css/
+│	    └── js/
+└── basedatos/
+	    └── bd.sqlite
+'''
+
+Si se vuelve a pulsar el botón **no se deben volver a crear los directorios ni ficheros** que ya existen.
+
+Posible solución:
+'''
+require( 'config.php');
+
+$exito = mkdir( '../basedatos' );
+if(!$exito){
+	responderError('<p>Error al crear el directorio basedatos. El directorio ya existe o no se tienen permisos para crearlo.</p><p>Mensaje: ' . error_get_last()['message'] . '</p>');
+}
+
+$exito = touch( '../basedatos/bd.sqlite' );
+if(!$exito){
+	responderError('Error al crear el fichero bd.sqlite</p><p>Mensaje: ' . error_get_last()['message'] . '</p>');
+}
+
+responder('<p>Completada la creación de ficheros y directorios.</p>');
+'''
+
+
+El fichero ''config.php'' contiene básicamente esto:
+'''
+<?php
+
+function responderError( $datos ){
+	$respuesta["error"] = true;
+	$respuesta["datos"] = $datos;
+
+  //mandamos la respuesta
+  echo json_encode($respuesta);
+  
+  exit(1);
+}
+
+
+function responder( $datos ){
+	$respuesta["error"] = false;
+	$respuesta["datos"] = $datos;
+
+  //mandamos la respuesta
+  echo json_encode($respuesta);
+  
+  exit(0);
+}
+
+/* ERROR REPORTING */
+//Indica que sólo se mostrarán errores, no Warnings ni otros errores. 
+//Valores posibles: E_ERROR | E_WARNING | E_PARSE | E_NOTICE
+error_reporting(E_ERROR);
+'''
+
+
+
+

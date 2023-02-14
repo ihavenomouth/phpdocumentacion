@@ -1,0 +1,246 @@
+Content-Type: text/x-zim-wiki
+Wiki-Format: zim 0.6
+Creation-Date: 2023-01-11T12:31:24+01:00
+
+
+====== PHP Orientado a objetos ======
+
+La POO se basa en una serie de conceptos:
+	* **Clase**: asbtracción de un concepto con un conjunto de cualidades.
+	* **Objeto**: instancia concreta de una clase
+	* **Atributo**: una característica de la clase. Habitualmente los objetos tienen valores asignados a estos atributos
+
+Una clase puede contener también funciones que interactúen con sus atributos, estas funciones se llaman **métodos**.
+
+Para que un lenguaje de programación use la POO debe ser capaz de permitir programar usando una serie de características:
+	* **Abstraccion**: el mecanismo que permite decidir qué atributos de la realidad formarán parte de una clase. También se aplica a las relaciones entre las mismas y su funcionalidad. Por ejemplo, podemos definir que un objeto de la clase ''Gato'' necesita un nombre, una edad y una descripción.
+	* **Encapsulamiento**: hace referencia a agrupar un conjunto de atributos y ocultarlos al exterior, haciendo posible que sólo puedan modificarse los atributos de un objeto a través de los métodos que se proporcionan para ello. Por ejemplo, se puede hacer que sólo se pueda acceder a la edad usando los métodos ''obtenerEdad()'' y ''establecerEdad()''.
+	* **Herencia**: permite añadir un nivel de abstracción extra al definir clases que dependan de la definición de otra, por ejemplo añadiendo nuevos atributos. Por ejemplo, podemos definir las propiedades de una clase ''Gato'' partiendo de la clase ''Mamífero'' que a su vez herede de la clase ''Animal''.
+	* **Polimorfismo**: permite a un objeto de una clase presentarse como objeto de otra clase según el contexto. Por ejemplo, si una función necesita como parámetro un objeto de la clase ''Animal'', será posible utilizar un objeto de tipo ''Gato''.
+
+
+====== Definir una clase en PHP ======
+
+Vamos a seguir una serie de pasos:
+	1. Los nombres de las clases **comienzan con mayúsculas**. 
+	2. Las definiremos en **un fichero aparte con el nombre de la clase en mayúsculas y extensión php**. Aunque esto no es obligatorio sí es recomendable hacerlo así.
+	3. El método más importante que hay que definir en el fichero es **el constructor**, que se llamará así: ''__construct()''
+	4. Desde el fichero principal cargaremos la definición de la clase usando un ''include("NombreClase.php");'' o ''include_once("NombreClase.php");''
+
+**Nota**: El fichero que implemente una clase no debe terminar con el cierre de ''?>''. Esto es para evitar que se manden las cabeceras del HTML antes de tiempo.
+
+===== Ejemplo: clase Animal =====
+
+'''
+<?php
+class Animal {
+	private $nombre;
+	private $edad;
+	private $tipo;
+
+	// Constructor
+	public function __construct($nombre, $edad, $tipo) {
+		$this->nombre = $nombre;
+		$this->edad   = $edad;
+		$this->tipo   = $tipo;
+	}
+
+	public function cumplirAño() {
+		$this->edad++;
+	}
+
+	public function saludo() {
+		return "Hola, soy $this->nombre y tengo $this->edad años";
+	}
+
+	public function __toString() {
+		return "- Nombre: $this->nombre <br>- Edad: $this->edad";
+	}
+}
+'''
+
+
+Al igual que en otros lenguajes de programación, se pueden declarar los atributos y los métodos como privados (''private''), públicos (''public'') o protegidos (''protected'') con el mismo significado. Desde el fichero principal podemos ahora utilizar esta clase.
+
+'''
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>POO</title>
+</head>
+<body>
+<?php
+	include_once('Animal.php');
+	$roberto = new Animal("Roberto", 3, "Gato");
+	$moka    = new Animal("Moka", 2, "Perro");
+
+	$moka->cumplirAño();
+
+	echo '<p>',$moka->saludo(),'</p>'
+	echo '<p>',$moka,'</p>'
+?>
+</body>
+</html>
+'''
+
+
+**Nota**: Fíjate que al imprimir el objeto se llama al método ''__toString()''.
+
+**Recuerda**:
+	* ''public'': atributo o método accesible desde cualquier luegar donde se tenga acceso al objeto.
+	* ''protected'': atricuto o método accesible desde la propia clase y aquellas que hereden de ella.
+	* ''private'': atributo o método accesible sólo desde la propia clase. 
+	* Los métodos para obtener un valor suelen comenzar por ''get'' (como ''getEdad();'') y para establecer un valor empiezan por ''set'' como por ejemplo ''setEdad(34);''
+	* También se pueden indicar que un atributo es ''readonly''.
+
+
+
+===== Referencias =====
+
+PHP funciona por referencias, como muchos otros lenguajes de programación (por ejemplo java o javascript).
+
+En este código se crea una clase P, se crea un objeto que se almacena en $a y se crea una nueva variable que se igual a $a. Se ve cómo realmente $a y $b apuntan al mismo objeto.
+
+'''
+Class P{ 
+	public $a; 
+	function __construct($a){
+		$this->a = $a;
+	}
+}
+
+a = new P(2);
+echo $a->a; //imprime 2
+
+// no se hace una copia, se crea una nueva referencia que apunta al mismo objeto
+$b = $a; 
+$b->a = 5;
+echo $a->a; //imprime 5, $a y $b apuntan al mismo objeto
+'''
+
+
+
+===== Herencia y clases abstractas =====
+
+La herencia de clases permite definir una clase que herede los atributos y métodos de una clase padre. Veámoslo creando una clase abstracta y así matamos dos pájaros de un tiro.
+
+Una clase //abstracta// es una clase de la que no se pueden instanciar objetos, y además puede contener métodos //abstractos//, es decir sin código concreto (simplemente se define la firma de los mismos). Serán las clases hijas que hereden de la clase abstracta los encargados de implementar estos métodos.
+
+'''
+abstract class Persona{
+
+	private $nombre;
+	abstract protected function saludar(); //se declara un método abstracto y protegido
+
+	public function __construct($n){
+		$this->nombre = $n;
+	}
+
+	public function getNombre(){
+		return $this->nombre;
+	}
+
+	public __toString(){
+		return "Nombre: $this->nombre";
+	}
+}
+
+
+
+
+class Alumno extends Persona{
+	
+	protected $apellido;
+
+	//implementamos el método saludar (que heredamos)
+	protected function saludar(){
+		return "<p>Hola, soy $this->getNombre()</p>";
+	}
+
+	//el constructor debe llamar al constructor del padre
+	public function __construct($n, $a){
+		parent::__construct($s);
+		
+		if( isset($a) ) {
+			$this->apellido = $a;
+		} else {
+			$this->apellido = "del Diablo";
+		}
+
+	public __toString(){
+		return parent::__toString() . ", apellido: $this->apellido";
+	}
+
+}
+
+$a = new Alumno("Javier", "Mancera");
+echo $a->saludar();
+echo $a;
+'''
+
+Como se ve, se pueden llamar los métodos del objeto padre con ''parent::método()''.
+
+
+===== Ejercicio =====
+
+**Ejercicio 1**: Crea una web que gestione la cuenta de ahorros de un usuario. La web presentará un formulario con dos cuadros de texto y un botón de //Crear cuenta//. En uno de los cuadros de texto se indicará el nombre del titular y en el otro se indicará el dinero inicial de la cuenta.
+
+Al pulsar el botón de //Crear cuenta//, se creará un objeto de una clase de tipo //Cuenta// que se almacenará en la sesión del usuario.
+
+{{./pasted_image003.png}}
+
+Crea una clase llamada //Cuenta// que tendrá los siguientes atributos: ''titular'' (el nombre del titular), ''cantidad'' (un número que puede tener decimales) y ''movimientos'' (un array de números que indicará los movimientos en la cuenta).
+
+La clase tendrá un constructor, un método ''getTitular()'', uno ''getCantidad()'' y uno ''getMovimientos()'' que devolverá todos los movimientos de la cuenta (el contenido del array ''movimientos'').
+
+Añade también un método ''ingresar( dinero )'' que hará lo siguiente:
+	* Comprobará si el parámetro ''dinero'' es un número positivo, si no lo es mostrará un mensaje de error y terminará. 
+	* Sumará el valor del parámetro ''dinero'' al atributo ''cantidad'' de la clase.
+	* Añadirá el valor del parámetro ''dinero'' al array de ''movimientos''.
+
+Añade también un método ''retirar( dinero )'' que hará lo siguiente:
+	* Comprobará si el parámetro ''dinero'' es un número negativo, si no lo es mostrará un mensaje de error y terminará.
+	* Sumará el valor del parámetro ''dinero'' al atributo ''cantidad'' de la clase (sumando el número negativo se reduce el dinero disponible).
+	* Añadirá el valor del parámetro ''dinero'' al array de ''movimientos''.
+
+Añade a la web la funcionalidad de ingresar dinero en cuenta y retirar dinero de la cuenta. Por ejemplo, puedes usar un formulario como el de abajo.
+
+{{./pasted_image004.png}}
+
+Completa la web añadiendo un botón //Mostrar estado// que al pulsarse muestre la cantidad disponible en la cuenta de ahorro. Y otro botón llamado //Movimientos// que muestre el listado de los movimientos.
+
+
+
+**Ejercicio 2**: Crea una clase Palabra que contenga: 
+	* Tres atributos privados de tipo ''string'': ''español'', ''inglés'' y ''categoría''.
+	* Un método ''getInglés()'' que devuelva el contenido del atributo ''inglés''.
+	* Redefinirá el método ''__toString()'' de manera que si el contenido del atributo ''categoría'' es sustantivo devolverá el contenido del atributo ''español'' entre etiquetas ''<strong></strong>'' y en caso contrario lo devolverá entre etiquetas ''<em></em>''
+
+Crea una clase ''Diccionario'' que contenga:
+	* Un atributo privado llamado ''palabras'' que contendrá un array de objetos de tipo ''Palabra''.
+	* Un método público ''traducir()'' que reciba un ''string'' como parámetro y lo busque entre los objetos de tipo ''Palabra'' en el array (usando el método ''getInglés()'' de cada objeto ''Palabra''). Si no lo encuentra devolverá el ''string'' que ha recibido como parámetro. Si lo encuentra devolverá el resultado de ejecutar un ''__toString()'' sobre el objeto encontrado. 
+	* Un método público ''añadir()'' que permita añadir un nuevo objeto de tipo ''Palabra'' al array.
+
+Crea una web que nos muestre dos formularios. El primer formulario permitirá añadir palabras y contendrá: 
+	* Un primer textbox para que introduzcamos una palabra en inglés. 
+	* Un segundo textbox para que introduzcamos la traducción al español.
+	* Un select que nos permita elegir si la palabra es un sustantivo o un verbo.
+	* Un botón de tipo submit con la etiqueta //Enviar//.
+
+Cuando el usuario rellene los datos, cada vez que pulsemos //Enviar// se mandarán los datos al servidor que creará un objeto de tipo ''Palabra'' y lo añadirá a un objeto de tipo ''Diccionario'' que se almacenará en la sesión para que no se pierda su contenido. 
+
+{{./pasted_image.png}}
+
+El segundo formulario contendrá:
+	* Un textarea en el que se podrá escribir un texto en inglés.
+	* Un botón de tipo submit con la etiqueta //Traducir//.
+
+Cuando se pulse el botón de //Traducir//, el servidor recogerá el texto introducido en el textarea, lo recorrerá palabra por palabra y traducirá aquellas que aparezcan en el diccionario mostrando el resultado al usuario.
+
+{{./pasted_image001.png}}
+
+El resultado podría ser parecido a este:
+
+{{./pasted_image002.png}}
+

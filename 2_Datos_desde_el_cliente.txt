@@ -1,0 +1,204 @@
+Content-Type: text/x-zim-wiki
+Wiki-Format: zim 0.6
+Creation-Date: 2022-10-14T14:11:58+02:00
+
+
+
+====== Recogida de información mediante formularios ======
+
+Para proporcionar algo de interactividad a nuestros programas vamos a necesitar crear un formulario usando HTML. De hecho vamos a crear dos páginas diferentes:
+	* Una página HTML con un formulario donde introducir datos
+	* Una segunda página con código PHP donde recuperaremos los datos, los trataremos y mostraremos el resultado
+
+
+En la primera vamos a incluir un formulario de este tipo:
+'''
+<form action="saludo.php" method="get">
+	<input type="text" name="txtNombre" id="txtNombre"><br>
+	<input type="number" name="txtEdad" id="txtEdad"><br>
+	<input type="submit" value="Enviar">
+</form>
+'''
+
+
+Fíjate en los siguientes aspectos:
+	* En la propiedad ''action'' del formulario se incluye la página que va a procesar los datos del formulario
+	* En la propiedad ''method'' del formulario se especifica si los datos se mandarán por el método GET o por el método POST. Con GET los parámetros viajan en la URL (se ven en la barra de direcciones) y con POST no.
+	* Existe un botón de tipo ''submit'' que al pulsarlo mandará la información a la página que procesará los datos (que aparece en el ''action'')
+
+**Importante**: sólo se mandarán los datos de los controles que contengan un atributo ''name''.
+
+La página que procesará los datos se llamará ''saludo.php'' (el nombre del atributo ''action'' del formulario) y tendrá que recuperar el valor que el usuario haya introducido en el cuadro de texto y mostrará una respuesta como la de abajo.
+
+'''
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+</head>
+<body>
+	<p>Hola <?php echo $_GET['txtNombre'] ?>, aunque tienes <?php echo $_GET['txtEdad'] ?> 
+    años, estás hecho un chaval.</p>
+</body>
+</html>
+'''
+
+
+Lo más relevante del código de arriba es que se reciben los datos mandados por el formulario dentro del array asociativo ''$_GET'', como queremos recuperar el valor que contenía el ''txtNombre'', lo que escribimos es ''$_GET['txtNombre']''.
+
+Podemos comprobar si el cuadro de texto contenía un valor usando la función ''empty()'':
+'''
+if( empty($_GET['txtDato3'])  ){
+	echo "<p>txtDato3 está vacío</p>";
+	return;
+}
+'''
+
+
+==== htmlspecialchars ====
+
+Cuando vayamos a escribir código HTML usando datos recibidos desde el cliente es una buena práctica utilizar la función ''htmlspecialchars()'' que convertirá los caracteres potencialmente complicados (como por ejemplo los acentos o los símbolos de mayor y menor) a las entidades correspondientes (por ejemplo ''&iacute;'' o ''&lt;'').
+
+'''
+$nombre = $_GET['txtNombre'];
+<p>Hola <?php echo htmlspecialchars($nombre) ?></p>
+'''
+
+
+
+
+===== Patrón de diseño a utilizar =====
+
+Para intentar ahorrarnos problemas, podemos usar este patrón:
+'''
+$nombre_usuario = trim($_POST['nombre_usuario'] ?? '');
+'''
+
+
+Lo que hace es intentar recuperar el dato que ''nombre_usuario'' que se ha pasado por el método ''POST'' desde el cliente. Si no se mandó ese dato, el operador ''??'' (Null Coalescing Operator) hará que se use la cadena vacía (''’’'') como valor. En cualquiera de los dos casos, se eliminarán los espacios en blanco que tenga la cadena de caracteres resultante por delante y por detrás.
+
+Por ejemplo: si se manda desde el cliente ''"  Javier    "'', la variable ''$nombre_usuario'' contendrá ''"Javier"''. Si no se manda nada, contendrá ''‘‘''.
+
+**Nota**: las comillas simples en la explicación de arriba han sido sustituidas por ’ por legibilidad. Cuidado al hacer copy&paste.
+
+
+===== Validación de formularios =====
+
+Hay varias maneras de realizar la validación de un formulario en el lado del cliente:
+	* Usando atributos de los propios controles
+	* Usando Javascript
+	* Combinando ambos métodos
+
+Y en cualquier caso **siempre** se deben validar de nuevo los datos en el servidor. El Javascript del lado del cliente puede ser manipulado o incluso desactivado. La validación que se hace en el cliente es para evitar realizar una llamada al servidor que consume tiempo y ancho de banda con datos que son inválidos, pero la validación real se debe hacer en el lado del servidor.
+
+
+==== Usando atributos ====
+
+Una de las más sencillas es establecer en los propios controles (etiquetas ''<input>'', ''<select>'', etc.) las características de un dato válido. Este tipo de validación es más rápida que la que se puede realizar con Javascript, pero menos flexible.
+
+Por ejemplo, el siguiente cuadro de texto es obligatorio que tenga un dato que tenga entre 3 y 5 caracteres (incluidos ambos):
+''<input type="text" minlength="3" maxlength="5" required name="txtDato1" id="txtDato1">''
+
+Otros atributos posibles para los controles son:
+	* **required**: El campo tiene que estar relleno
+	* **minlength** y **maxlength**: La longitud de la cadena de caracteres mínima y máxima
+	* **min** y **max**: El valor mínimo y máximo de un valor numérico
+	* **type**: Especifica si el dato tiene que ser un número, una dirección de correo, una fecha, etc.
+	* **pattern**: El dato debe cumplir la expresión regular que se indique
+	* Si se incluye ''step="1"'' en un ''type="number"'' se indicará que sólo son válidos los números enteros (así que 3.4 será un valor inválido).
+
+**Importante**: Un formulario no se enviará al servidor si contiene valores que sean inválidos.
+
+Estos valores inválidos pueden recalcarse visualmente usando el pseudo-selector '':invalid''
+
+{{./pasted_image002.png}}
+
+
+==== Usando javascript ====
+
+El segundo método consiste en realizar una validación en Javascript antes de mandar algún dato al servidor. Puede ser necesario en algunos casos, por ejemplo si tenemos dos campos y hay que asegurarse de que ambos contengan el mismo dato (como el típico ejemplo de escribir el correo electrónico en una página de registro).
+
+Podemos usar la manera antigua (importante el ''return''): 
+''<form onsubmit="return validar()" ...>''
+
+Y luego en Javascript:
+'''
+function validar(){
+	if( ... ) return false;
+	return true;
+}
+'''
+
+ 
+La función validar comprobará los valores del formulario. Si son todos correctos devolverá ''true'' y en caso contrario devolverá ''false''. Sólo se mandarán los datos al servidor si se devuelve ''true''.
+
+El método más moderno consiste en asignar un id al formulario y luego en el Javascript asignar un //eventListener// al evento //Submit//.
+''<form id="fdatos" ...>''
+
+En el Javascript se comprueba que los datos del formulario sean correctos y si no lo son se ejecuta el ''preventDefault()'' que impedirá que se manden los datos al servidor.
+'''
+document.querySelector("#fdatos").addEventListener("submit", e=>{
+	if( ...) e.preventDefault();
+});
+'''
+
+
+
+
+===== Ejercicios =====
+
+**Ejercicio 1:** Crea un programa con un formulario en el que se pida un número y se envíen al servidor. El servidor calculará y mostrará la tabla de multiplicar de ese número.
+
+**Ejercicio 2:** Realiza un conversor de millas por galón a kilómetros por litro. La cantidad de millas por galón debe introducirse mediante un formulario. Antes de mandar el valor al servidor se debe validar que el valor se encuentra entre 1 y 100.
+En el servidor el dato será procesado usando PHP (si sabes cómo hacerlo, prueba a realizar la validación del lado del servidor). El resultado de la conversión será mostrado al usuario como respuesta.
+
+**Ejercicio 3:** Crea una aplicación web que sirva para crear un documento justificativo de las dietas de un trabajador. Para ello presentará al usuario un formulario similar al que aparece en la imagen de abajo.
+
+{{./pasted_image.png}}
+
+El botón de //Calcular// rellenará el cuadro de texto que contiene el //Total a pagar//. El botón de //Generar// servirá para mandar los datos al servidor, que generará un informe similar al que aparece en la imagen de abajo.
+{{./pasted_image001.png}}
+
+
+**Ejercicio 4:** Escribe un programa que calcule el salario semanal de un trabajador en base a las horas trabajadas por semana. Se mostrará un formulario con dos cuadros de texto, en uno se indicarán las horas trabajadas a la semana y en el otro el dinero que se paga cada hora. Estos datos se pasarán al servidor que será el que realice cálculos con ellos.
+ Si no se indica un sueldo por hora, se pagarán 15 euros por hora como valor por defecto. Haz que el resultado obtenido se multiplique por 4 para obtener el sueldo mensual aproximado. Si se le retiene un 15% de IRPF ¿cuál será el sueldo neto y bruto del trabajador?
+Calcula todos estos datos y muéstralos al usuario como respuesta.
+
+
+
+====== Dos botones de submit en un formulario ======
+
+Imaginemos que necesitamos incluir dos botones de //submit// en un formulario. ¿Cómo distinguimos en el servidor cuál se ha pulsado de los dos? En realidad es bastante fácil, empezaremos añdiéndoles los atributos ''name'' e ''id'' con valores diferentes.
+
+'''
+	<form method="POST" action="servidor.php">
+		<input type="number" name="txtNumber"   id="txtNumber"><br>
+		<input type="submit" name="btnAnadir"   id="btnAnadir"   value="Añadir">
+		<input type="submit" name="btnCalcular" id="btnCalcular" value="Calcular">
+	</form>
+'''
+
+
+Ahora desde el lado del servidor podemos saber qué botón se ha pulsado de los dos:
+'''
+if( isset($_POST['btnAnadir']) ){
+	//
+} else if( isset($_POST['btnCalcular']) ){
+	//
+}
+'''
+
+
+===== Ejercicio =====
+
+**Ejercicio 5:** Crea una web que contenga un campos de texto para el nombre y tres botones para el género (hombre, mujer y no binario). Si el botón pulsado es el primero, se mostrará un mensaje de "Bienvenido + nombre", si es el segundo el mensaje dirá "Bienvenida + nombre" y si es el tercero dirá "Bienvenide + nombre".
+
+
+
+
+====== Documentación extra ======
+
+Más información:
+	* https://developer.mozilla.org/en-US/docs/Learn/Forms/Form_validation#using_built-in_form_validation
+	* https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement/submit_event
+	* https://developer.mozilla.org/en-US/docs/Learn/Forms/Sending_and_retrieving_form_data

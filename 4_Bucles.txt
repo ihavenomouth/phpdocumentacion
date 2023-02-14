@@ -1,0 +1,81 @@
+Content-Type: text/x-zim-wiki
+Wiki-Format: zim 0.6
+Creation-Date: 2022-11-01T21:02:04+01:00
+
+
+====== Bucles ======
+
+Los bucles en PHP se comportan de manera análoga a los bucles en Java, C o Javascript.
+'''
+//BUCLE FOR:
+for ($i = 1; $i <= 10; $i++) {
+	echo $i;
+}
+
+//BUCLE WHILE:
+$i=4;
+while (i>0){
+	echo $i;
+	$i--;
+}
+
+//BUCLE DO-WHILE:
+$i = 0;
+do {
+    echo $i;
+} while ($i > 0);
+'''
+
+El único que tiene una sintaxis diferente es el ''foreach'' que nos permite usar un patrón iterador para recorrer el array. Hay dos maneras de usarlo diferentes, aunque muy similares:
+'''
+foreach (expresión_array as $valor)
+	sentencias
+
+foreach (expresión_array as $clave => $valor)
+	sentencias
+'''
+
+
+Dependiendo de si usamos un array asociativo o un array normal nos interesará usar la primera forma o la segunda. También se puede utilizar para iterar sobre las propiedades de un objeto.
+
+**Nota**: fíjate que el orden correcto es indicar **primero el array** y luego la variable iterador
+
+**Importante**: por defecto este recorrido no permite modificar los valores del array.
+**Importante**: Para poder modificar directamente los elementos del array dentro de bucle, se ha de anteponer ''&'' a ''$valor''. En este caso el valor será asignado por referencia.
+Si sólo queremos recorrer los valores, pero no modificarlos no es necesario (ni recomendable) poner el ''&''.
+
+Ejemplo:
+'''
+$array = array(1, 2, 3, 4);
+foreach ($array as &$valor) {
+	$valor = $valor * 2;
+}
+'''
+
+**Importante**: para evitar problemas de referencias en un bucle en el que modificamos el valor, tras el bucle deberíamos ejecutar un ''unset($valor);'' Para más información: https://www.php.net/manual/es/control-structures.foreach.php
+
+
+Si necesitas el índice y quieres usar un ''foreach'' (esto mismo funciona en un array asociativo):
+'''
+//Si necesitas el índice
+$pastas = ["Ravioli", "Spaguetti", "Macarrones"];
+foreach($pastas as $indice => $p){
+	echo $p ocupa la posición $indice
+}
+'''
+
+
+
+===== Ejercicios =====
+
+**Ejercicio 1**: Escriba un programa que muestre en la pantalla todos los números menores que 50 y que no sean no divisibles por 3.
+
+**Ejercicio 2**: Un programa que indique si los números son primos entre sí. Dos números son primos entre sí si no tienen otro factor común que no sea el 1.
+Por ejemplo: El 9 y el 4 son primos entre sí porque no tienen ningún factor común distinto de 1.
+El 9 y el 6 no son primos entre sí porque tienen como factor común el 3.
+
+**Ejercicio 3**: Al nacer un niño sus padres le abren una libreta de ahorros en la que ingresan todos los años 300 euros. A dicho dinero el banco abona el día 31 de diciembre de cada año unos intereses del 5% de la cantidad disponible en la libreta en dicho momento. Después de 18 años el niño retira el dinero, ¿de cuánto dispone?
+
+**Ejercicio 4**: Escribe un programa que reciba un número y muestre la tabla de multiplicar de dicho número.
+
+

@@ -1,0 +1,364 @@
+Content-Type: text/x-zim-wiki
+Wiki-Format: zim 0.6
+Creation-Date: 2022-10-04T19:14:14+02:00
+
+====== Introducción y variables ======
+
+
+
+===== Introducción al entorno de desarrollo =====
+
+En la máquina virtual (El usuario es ''usuario'' y la clave es ''Kilobyte1'') la imagen docker preinstalada es ''php:apache'' que incluye la versión 8.1 de PHP. 
+También se ha instalado el VS Code.
+
+Para arrancar una imagen oficial de PHP que ya viene con el servidor web instalado.
+''docker run -d -p 80:80 --name nombreAppWeb -v "$PWD":/var/www/html php:8.1-apache''
+
+
+
+==== Hacer que se nos muestre el contenido del directorio actual ====
+
+Esta parte **es opcional**, simplemente es una muestra de cómo podemos cambiar la configuración del apache dentro del contenedor, de hecho es posible que no sea recomendable para evitar problemas de seguridad.
+
+Por defecto no se nos mostrará el contenido del directorio actual al ejecutar el contenedor, para ello tenemos que modificar el fichero que se encuentra en ''/etc/apache2/conf-available/docker-php.conf'' dentro del contenedor. Lo más sencillo será copiar el fichero con la configuración original, modificarlo, copiar el fichero modificado y recargar la configuración del apache. Supongamos que el contenedor se llama ''hlcdam''
+
+1- Copiamos el fichero del contenedor al directorio actual
+''docker cp hlcdam:/etc/apache2/conf-available/docker-php.conf .''
+
+2- Modificamos el fichero
+La parte que nos interesa es la que tiene un ''Options -Indexes'', que hay que cambiarlo por:
+''Options Indexes''
+
+3- Volvemos a copiarlo dentro del contenedor
+''docker cp docker-php.conf hlcdam:/etc/apache2/conf-available/docker-php.conf''
+
+4- Recargamos el apache del contenedor
+''docker exec hlcdam service apache2 reload''
+
+**Nota**: sólo aparecen los ficheros y directorios que apache pueda leer. 
+Los directorios tendrán que tener permisos de ''r'' y ''x''. Para cambiar los permisos de todos los directorios bajo el directorio actual podemos ejecutar lo siguiente: ''for i in */; do chmod a+rx "$i" ; done''
+Con ''-R'' lo haremos recursivo.
+
+
+===== Servidor web integrado =====
+
+Si tenemos PHP instalado localmente en nuestra máquina, podemos usar el servidor web que incluye con:
+''php -S localhost:8000 -t .''
+
+Este es un servidor pensado para ser usado para pruebas rápidas y demostraciones (Apache o Nginx son mejores), sólo debe ser usado para desarrollo y no está recomendado para producción. Por defecto sólo permite accesos desde la propia máquina. Habría que usar ''0.0.0.0'' como dirección para que se pueda acceder desde una máquina remota.
+
+Si queremos usar este servidor integrado desde nuestro propio contenedor, podemos usar esta receta
+'''
+docker run -d -it -v "$PWD":/root --name phpservintegrado -p80:80 ubuntu:22.04 /bin/bash
+docker attach phpservintegrado
+apt update && apt install php8.1
+php -S 0.0.0.0:80 -t /root
+'''
+
+
+
+====== Insertar código PHP en HTML ======
+
+Directamente podemos escribir código dentro de un fichero HTML con extensión PHP.
+'''
+<?php
+$numero = 20;
+$palabra = "hola";
+print_r(get_defined_vars());
+?>
+'''
+
+
+===== Mostrar información por la consola =====
+
+Hay dos maneras de mostrar información de una manera cómoda. La primera es a través de la propia consola del navegador y la segunda a través de la consola del contenedor.
+
+==== Usando la consola del navegador ====
+Basta con ejecutar donde lo necesitemos un trozo de código javascript que escriba en la consola:
+''echo("<script>console.log('PHP: Hola caracola')</script>");''
+
+==== Usando la consola en el servidor ====
+Para que sea el servidor el que nos muestre el mensaje, podemos usar la función ''error_log()''. Por ejemplo:
+''error_log("Hola caracola");''
+
+El problema es que si queremos ver esa información únicamente tendremos que filtrar la información que obtengamos (por defecto todo lo que se registra en Apache pasa al fichero de logs). Suponiendo que el contenedor se llame ''hlcdam'', podemos hacerlo así:
+''docker logs hlcdam | grep php:notice''
+
+
+
+
+====== Variables ======
+
+
+Las variables se declaran sin tipo, son dinámicas y su nombre comienza por ''$''. Por ejemplo:
+'''
+$a = "Hola"
+$a = 5;
+'''
+
+
+Para ver el valor de todas las variables creadas se puede usar lo siguiente:
+''print_r(get_defined_vars());''
+
+Para ver el valor de una variable en PHP junto con su tipo se puede usar la función ''var_dump( variable )''.
+
+Para eliminar una variable (y por tanto liberar memoria) se puede usar ''unset( $a );''
+Esto puede que sólo tenga sentido hacerlo si hablamos de liberar objetos grandes o arrays.
+
+
+===== Aclaraciones sobre el nombre de las variables =====
+
+==== Distingue mayúsculas de minúsculas... a veces ====
+
+PHP es semi //case-sensitive//, en algunos casos distingue mayúsculas de minúsculas y en otros no lo hace.
+
+Por ejemplo las palabras reservadas del lenguaje (como ''if'', ''while'' o ''for'') se pueden escribir de cualquier forma, sin embargo se distingue entre mayúsculas y minúsculas en los nombres de variables, pero no en el de las funciones.
+
+==== Palabras reservadas ====
+
+Como las variables comienzan por ''$'', podemos tener variables que se llamen como las palabras reservadas del lenguaje ''$while''.
+
+==== Nombres correctos ====
+
+Los nombres de las variables pueden contener números, pero no empezar por un número.
+Pueden comenzar y terminar por ''_'',
+No pueden tener espacios en el nombre.
+Las variables pueden contener caracteres unicode como acentos, eñes o cedillas.
+
+¿Qué nombres de variables son correctos? Piénsalo primero y luego realiza alguna prueba donde lo confirmes.
+'''
+$$
+$💩
+$function
+$___estado_
+$23alumno
+$alumno23
+$?php
+$php?
+$PinGüinO
+$.nombre
+$nombre.
+$nom.bre
+$p-h
+
+'''
+
+==== Scope (ámbito) de las variables ====
+
+Las variables pueden tener 3 ámbitos distintos:
+	* **global**
+	* **local**
+	* **static**
+
+
+=== Local ===
+
+Una variable **local** está definida en un bloque y sólo existe dentro de ese bloque de código. Por ejemplo, una función creada en un bucle ''for'' como índice, una variable creada dentro de una función, etc.
+
+**Nota**: No es exactamente igual que Javascript. Por ejemplo: ¿Qué imprimirá este código?
+'''
+$a = 2;
+{
+	$a = 5;
+	$b = 'Hola';
+}
+echo $a, $b
+'''
+
+
+**Solución**: Imprimirá ''5Hola''
+
+
+=== Global ===
+
+Una variable **global** está disponible en cualquier parte del código, se declaran en el //main// del código (la parte general). Pero debemos indicar que estamos accediendo a ella con la palabra reservada ''global'', por ejemplo:
+'''
+function saludo(){
+	global $a;        //indicamos que vamos a usar la vble global $a
+	return "Hola " . $a;
+}
+
+$a = 'Javier';
+'''
+
+
+**Importante**: se le puede cambiar el valor a la variable global dentro del código de una función.
+
+
+=== Static ===
+
+Una variable declarada como ''static'' en una función permanecerá en memoria y no se eliminará al terminar la ejecución de la función. Sólo se le asignará el valor inicial la primera vez que se ejecute la función.
+
+'''
+function contar(){
+	static $num = 0;
+	$num++;
+	echo '<p>', $num,'</p>';
+}
+
+contar(); //imprime 1
+contar(); //imprime 2
+contar(); //imprime 3
+'''
+
+
+
+===== Cadenas de caracteres =====
+
+Las cadenas de caracteres que vayamos a usar tal cual, sin modificar, deberíamos declararlas usando las comillas simples. Al no tener que ser interpretado será más eficiente y por tanto debería ser nuestra opción por defecto.
+Sin embargo, cuando indicamos la cadena de caracteres con comillas dobles el intérprete de PHP tratará de interpretar el contenido de la cadena de caracteres. 
+
+Por ejemplo:
+'''
+$a = 'Javier Mancera';
+echo "<p>$a</p>";  //Javier Mancera
+echo '<p>$a</p>';  //$a
+'''
+
+
+
+El caracter de escape es la contrabarra \.
+''$james_brown = 'This is a Man\'s World!';''
+
+Las comillas dobles pueden contener caracteres de escape que significan cosas diferentes: ''\n'', ''\t'', ''\\'', ''\$'', ''\r'', ''\"'', ...
+
+Además, podemos usar **plantillas** al estilo de Javascript (pero no igual, cambia el orden de ''${}'' y no puede contener expresiones (como una suma), sólo variables). Esta opción es preferible a la de poner directamente el nombre de la variable (en el segundo ejemplo se ve que sin las llaves habría ambigüedad sobre si queremos la variable ''$animalPreferido'' o la ''$animalPreferidos'').
+
+Ejemplo 1:
+'''
+$nombre = 'Javier';
+echo "\n\t Mi nombre es {$nombre}!";
+'''
+
+Ejemplo 2:
+'''
+$animalPreferido = 'perro';
+echo "Me gustan los {$animalPreferido}s";
+'''
+
+
+Se pueden concatenar cadenas usando los operadores ''.'' o ''.='' 
+Sin embargo, es más rápido y eficiente usar comillas dobles y plantillas literales.
+'''
+$a =  'a';       //a
+$a =  'a' . 'b'; //ab
+$a .= 'c';       //abc
+'''
+
+
+Una cadena de caracteres tiene una limitación de tamaño de 2GB como máximo.
+
+Una cadena de caracteres puede abarcar varias líneas:
+'''
+echo 'Esto es perfectamente
+valido y no dará
+ningún tipo de problemas';
+'''
+
+
+
+===== Constantes =====
+
+Las constantes siempre tienen ámbito glocal. 
+''define( 'FIRST_CONSTANT', 'first' );''
+
+Se declaran sin usar el ''$'' y con el nombre en mayúsculas.
+
+===== Conversión de tipos (Casting) =====
+
+PHP tratará de convertir los tipos de las variables automáticamente. Por ejemplo:
+'''
+$a = 5; //contiene un entero
+$b = 2;
+$a = $a/$b; // $a contiene 2.5, un float
+'''
+
+
+Para hacer la conversión de manera explícita podemos usar:
+	* string
+	* float
+	* int
+	* bool
+	* array
+	* object
+
+'''
+$diez = 10;
+$conv = (string) $diez;
+var_dump( $conv );
+'''
+
+
+Un ejemplo algo más elaborado:
+'''
+$numTexto = '10';
+$num = (int) $numTexto; //contiene 10
+$precio = 15.5;
+$num = (int) $precio;
+echo $num; //Imprime 15
+'''
+
+
+
+===== Ejercicios: =====
+
+**Ejercicio 1:** Escribe un programa que muestre tu nombre y tu edad por pantalla. Utiliza código PHP y HTML. Cada dato debe ir en una línea diferente.
+Modifica el ejercicio para que tu nombre y edad se almacenen en una variable al principio y haz que se muestre por pantalla la edad que tendrás el curso siguiente, usa plantillas literales para mostrar los mensajes.
+
+**Ejercicio 2:** Crea un conversor de euros a dólares. La cantidad de euros a convertir debe estar almacenada en una variable y la tasa de cambio entre las monedas en una constante.
+
+**Ejercicio 3:** Escribe un programa que utilice las variables ''$x'', ''$y'' y ''$z''. Asignales los valores 313, 979 y 123 respectivamente. A continuación, muestra por pantalla el valor de cada variable, la suma de las tres variables, la resta, la multiplicación y finalmente la división de ''$x'' entre ''$y''. 
+Vuelve a calcular la división de ''$x'' entre ''$y'', pero esta vez realiza un casting a entero al resultado antes de mostrarlo por pantalla. ¿Qué número se muestra?
+Vuelve a mostrar el resultado de la división, pero haz que en esta ocasión sólo se muestren dos valores decimales usando la función ''number_format''. ¿Redondea valores? ¿Se muestran decimales si el valor que se usa con la función ''number_format'' es  un número entero? ¿Alguna diferencia con la función ''round''?
+¿Cuánto vale la media de los tres valores?
+
+**Ejercicio 4:** Crea un conversor de semanas a segundos, el número de semanas se almacenará en una variable. Haz que se muestren el valor de todas las variables creadas en el código.
+
+**Ejercicio 5:** Dado este código ¿qué ocurrirá? ¿se mostrará algo por pantalla y si es así qué será?
+'''
+$a = 7;
+{
+	$a = 8.2;
+}
+$A = 2;
+eCHo (int) $a;
+echo $a/0;
+'''
+
+**Ejercicio 6:** Crea un programa que contenga 3 variables: ''$nombre'', ''$apellido1'' y ''$apellido2''. 
+Crea una cuarta variable ''$nombreCompleto'' que contenga la unión del nombre y los dos apellidos.
+Haz que se muestre por pantalla el nombre junto con los dos apellidos.
+Haz que se muestre por pantalla primero los dos apellidos y separado por una coma el nombre.
+Ejemplo:
+'''
+Javier Mancera Fernández
+Mancera Fernández, Javier
+'''
+
+
+**Ejercicio 7:** Crea un conversor de binario a decimal de 4 bits.
+Por ejemplo:
+'''
+$bin = 1100;
+...   // <-- completa el código necesario
+echo "$bin en base 2 es $dec en base 10"; //1011 en base 2 es 12 en base 10
+'''
+
+
+
+== ocultar ==
+
+Solución del conversor a binario:
+'''
+$a = 1010;
+$b0 = (int) $a%10;
+$b1 = ((int) $a/10)%10;
+$b2 = ((int) $a/100)%10;
+$b3 = ((int) $a/1000)%10;
+
+$dec = $b0 + $b1*2 + $b2*4 + $b3*(2**3);
+echo "$bin es $dec";
+'''
+
+
+== finocultar ==
