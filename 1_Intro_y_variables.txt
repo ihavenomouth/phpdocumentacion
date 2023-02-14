@@ -59,7 +59,7 @@ php -S 0.0.0.0:80 -t /root
 
 ====== Insertar código PHP en HTML ======
 
-Directamente podemos escribir código dentro de un fichero HTML con extensión PHP.
+Directamente podemos escribir código dentro de un fichero HTML con extensión PHP. Basta incluirlo entre las etiquetas ''<?php'' y ''?>''.
 '''
 <?php
 $numero = 20;
